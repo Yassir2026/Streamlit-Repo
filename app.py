@@ -47,11 +47,15 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     .project-card {
-        background-color: #f0f2f6;
-        padding: 2rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        border-left: 5px solid #1f77b4;
+        background: linear-gradient(135deg, 
+            var(--secondary-background-color) 0%, 
+            var(--background-color) 100%);
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 16px 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
     }
     .metric-card {
         background-color: #e8f4f8;
@@ -84,7 +88,11 @@ st.sidebar.info("💡 Data is cached for up to 15 minutes. Click refresh for the
 if page == "🏠 Home":
     st.markdown('<div class="main-header">Data Engineering Portfolio</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Showcasing Real-time Data Pipelines & Analytics</div>', unsafe_allow_html=True)
-    
+    st.markdown("""<div class="sub-header" style="text-align: right;">by Yassir Adam
+    <a href="https://www.linkedin.com/in/yassir-adam2023/" target="_blank" style="text-decoration: none; margin-left: 10px;">
+            🔗 LinkedIn
+        </a></div>""", unsafe_allow_html=True)
+
     # Introduction
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
