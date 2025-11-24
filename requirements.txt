@@ -7,3 +7,4 @@ numpy==1.26.3
 sqlalchemy>=2.0
 redshift-connector
 snowflake-connector-python
+matplotlib
