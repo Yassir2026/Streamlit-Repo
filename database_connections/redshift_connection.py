@@ -1,14 +1,43 @@
 import streamlit as st
 import pandas as pd
 from typing import Optional
+import redshift_connector
 
 # All database credentials and configurations are managed through Streamlit secrets.
 # For more details, see: https://docs.streamlit.io/develop/concepts/connections/secrets-management
 
+@st.cache_resource
+def get_redshift_connection():
+    """
+    Create and cache a single Redshift connection.
+    Connection will be reused across queries.
+    
+    Returns:
+        redshift_connector.Connection: Cached connection
+    """
+    try:
+        redshift_config = st.secrets["connections"]["redshift"]
+        
+        conn = redshift_connector.connect(
+            host=redshift_config['host'],
+            database=redshift_config['database'],
+            user=redshift_config['username'],
+            password=redshift_config['password'],
+            port=redshift_config['port'],
+            timeout=30
+        )
+        
+        return conn
+        
+    except Exception as e:
+        st.error(f"❌ Failed to connect to Redshift: {str(e)}")
+        return None
+
+
 def execute_redshift_query(query: str, params: Optional[tuple] = None) -> Optional[pd.DataFrame]:
     """
     Execute a SQL query on Redshift and return results as a pandas DataFrame.
-    Uses Streamlit's connection management for robustness and performance.
+    Uses a cached connection for better performance.
     
     Args:
         query (str): SQL query to execute.
@@ -17,23 +46,51 @@ def execute_redshift_query(query: str, params: Optional[tuple] = None) -> Option
     Returns:
         Optional[pd.DataFrame]: Query results as DataFrame or None if execution fails.
     """
+    conn = get_redshift_connection()
+    
+    if conn is None:
+        return None
+    
+    cursor = None
+    
     try:
-        # Establish connection using st.connection
-        conn = st.connection("redshift", type="sql")
+        # Execute query with cursor
+        cursor = conn.cursor()
         
-        # Execute the query and return as a DataFrame
-        df = conn.query(query, params=params)
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+        
+        # Fetch results and convert to DataFrame
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        data = cursor.fetchall()
+        df = pd.DataFrame(data, columns=columns)
         
         if df is not None and not df.empty:
-            # st.info(f"✅ Query executed successfully: {len(df)} rows returned.")
             return df
         else:
-            # st.warning("⚠️ Query returned no data.")
-            return pd.DataFrame()  # Return an empty DataFrame for consistency
-            
+            return pd.DataFrame()
+        
     except Exception as e:
         st.error(f"❌ Query execution failed on Redshift: {str(e)}")
+        
+        # On error, clear cache to force reconnection on next call
+        try:
+            if conn:
+                conn.close()
+        except:
+            pass
+        st.cache_resource.clear()
+        
         return None
+        
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except:
+                pass
 
 def load_fda_volume_analysis() -> Optional[pd.DataFrame]:
     """
