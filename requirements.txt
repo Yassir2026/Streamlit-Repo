@@ -8,3 +8,5 @@ sqlalchemy>=2.0
 redshift-connector
 snowflake-connector-python
 matplotlib
+snowflake-connector-python>=3.5.0
+cryptography>=41.0.0

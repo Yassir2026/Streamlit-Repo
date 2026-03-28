@@ -1,9 +1,41 @@
 import streamlit as st
 import pandas as pd
 from typing import Optional
+import snowflake.connector
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 # All database credentials and configurations are managed through Streamlit secrets.
 # For more details, see: https://docs.streamlit.io/develop/concepts/connections/secrets-management
+
+# 添加这个函数
+@st.cache_resource
+def get_snowflake_connection():
+    """建立 Snowflake 连接（使用 Key Pair）"""
+    private_key_str = st.secrets["snowflake"]["private_key"]
+    private_key_bytes = private_key_str.encode('utf-8')
+    
+    p_key = serialization.load_pem_private_key(
+        private_key_bytes,
+        password=None,
+        backend=default_backend()
+    )
+    
+    pkb = p_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    
+    return snowflake.connector.connect(
+        user=st.secrets["snowflake"]["user"],
+        account=st.secrets["snowflake"]["account"],
+        private_key=pkb,
+        warehouse=st.secrets["snowflake"].get("warehouse"),
+        database=st.secrets["snowflake"].get("database"),
+        schema=st.secrets["snowflake"].get("schema"),
+        role=st.secrets["snowflake"].get("role")
+    )
 
 def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optional[pd.DataFrame]:
     """
@@ -19,10 +51,18 @@ def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optio
     """
     try:
         # Establish connection using st.connection's native Snowflake handler
-        conn = st.connection("snowflake")
+        # conn = st.connection("snowflake")
+        conn = get_snowflake_connection()
         
         # Execute the query and return as a DataFrame
-        df = conn.query(query, params=params)
+        # df = conn.query(query, params=params)
+        if params:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            df = cursor.fetch_pandas_all()
+            cursor.close()
+        else:
+            df = pd.read_sql(query, conn)
         
         if df is not None and not df.empty:
             # st.info(f"✅ Query executed successfully: {len(df)} rows returned.")
@@ -121,4 +161,44 @@ def load_geographic_analysis_data() -> Optional[pd.DataFrame]:
     LIMIT 1000
     """
     
+    return execute_snowflake_query(query)
+
+def load_fraud_fact_claims() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching FACT_CLAIMS from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.FACTS.FACT_CLAIMS ORDER BY ENCOUNTER_DATE DESC LIMIT 5000"
+    return execute_snowflake_query(query)
+
+def load_fraud_daily_summary() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_DAILY_CLAIMS_SUMMARY from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_DAILY_CLAIMS_SUMMARY ORDER BY SUMMARY_DATE DESC"
+    return execute_snowflake_query(query)
+
+def load_fraud_monthly_trend() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_FRAUD_TYPE_MONTHLY from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_FRAUD_TYPE_MONTHLY"
+    return execute_snowflake_query(query)
+
+def load_fraud_denial_reason() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_DENIAL_REASON from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_DENIAL_REASON"
+    return execute_snowflake_query(query)
+
+def load_fraud_providers() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching DIM_PROVIDERS from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.DIMENSIONS.DIM_PROVIDERS"
+    return execute_snowflake_query(query)
+
+def load_fraud_demographics() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_PATIENT_DEMOGRAPHICS from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_PATIENT_DEMOGRAPHICS"
+    return execute_snowflake_query(query)
+
+def load_fraud_procedures() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_PROCEDURE_FRAUD from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_PROCEDURE_FRAUD"
+    return execute_snowflake_query(query)
+
+def load_fraud_heatmap() -> Optional[pd.DataFrame]:
+    print("🚀 [Claims Fraud ETL] Fetching AGG_SUBMISSION_HEATMAP from Snowflake...")
+    query = "SELECT * FROM CLAIMS_PROCESSING_DB.AGGREGATES.AGG_SUBMISSION_HEATMAP"
     return execute_snowflake_query(query)
