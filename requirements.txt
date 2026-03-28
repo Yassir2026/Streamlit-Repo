@@ -1,12 +1,10 @@
-pip==24.0
 streamlit==1.31.0
-rich==13.7.1
 plotly==5.18.0
 pandas==2.1.4
 numpy==1.26.3
 sqlalchemy>=2.0
 redshift-connector
-snowflake-connector-python
-matplotlib
 snowflake-connector-python>=3.5.0
-cryptography>=41.0.0
+cryptography>=41.0.0,<42.0.0
+matplotlib
+rich==13.7.1

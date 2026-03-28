@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from typing import Optional
 import snowflake.connector
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
 # All database credentials and configurations are managed through Streamlit secrets.
@@ -18,7 +17,6 @@ def get_snowflake_connection():
     p_key = serialization.load_pem_private_key(
         private_key_bytes,
         password=None,
-        backend=default_backend()
     )
     
     pkb = p_key.private_bytes(

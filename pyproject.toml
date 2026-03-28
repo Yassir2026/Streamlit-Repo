@@ -1,6 +1,17 @@
 [project]
 name = "streamlit-repo"
 version = "0.1.0"
-description = "Add your description here"
+description = "Data Engineering Portfolio"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "streamlit==1.31.0",
+    "plotly==5.18.0",
+    "pandas==2.1.4",
+    "numpy==1.26.3",
+    "sqlalchemy>=2.0",
+    "redshift-connector",
+    "snowflake-connector-python>=3.5.0",
+    "cryptography>=41.0.0,<42.0.0",
+    "matplotlib",
+    "rich==13.7.1",
+]
