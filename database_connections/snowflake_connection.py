@@ -2,37 +2,55 @@ import streamlit as st
 import pandas as pd
 from typing import Optional
 import snowflake.connector
-from cryptography.hazmat.primitives import serialization
 
 # All database credentials and configurations are managed through Streamlit secrets.
 # For more details, see: https://docs.streamlit.io/develop/concepts/connections/secrets-management
 
-# 添加这个函数
 @st.cache_resource
 def get_snowflake_connection():
-    """建立 Snowflake 连接（使用 Key Pair）"""
-    private_key_str = st.secrets["snowflake"]["private_key"]
-    private_key_bytes = private_key_str.encode('utf-8')
+    """建立 Snowflake 连接
     
+    支持两种认证方式（在 secrets.toml 中配置其中一种）：
+    1. Programmatic Access Token (PAT) — 推荐：设置 token 字段
+    2. Key Pair — 旧方式：设置 private_key 字段
+    """
+    sf_secrets = st.secrets["snowflake"]
+    
+    # --- 方式 1: Programmatic Access Token (PAT) ---
+    # 需要 snowflake-connector-python >= 3.12.0
+    # authenticator 必须是 'PROGRAMMATIC_ACCESS_TOKEN'，不是 'oauth'
+    if "token" in sf_secrets:
+        return snowflake.connector.connect(
+            user=sf_secrets["user"],
+            account=sf_secrets["account"],
+            authenticator="PROGRAMMATIC_ACCESS_TOKEN",
+            token=sf_secrets["token"],
+            warehouse=sf_secrets.get("warehouse"),
+            database=sf_secrets.get("database"),
+            schema=sf_secrets.get("schema"),
+            role=sf_secrets.get("role"),
+        )
+    
+    # --- 方式 2: Key Pair 认证（fallback）---
+    from cryptography.hazmat.primitives import serialization
+    private_key_str = sf_secrets["private_key"]
     p_key = serialization.load_pem_private_key(
-        private_key_bytes,
+        private_key_str.encode("utf-8"),
         password=None,
     )
-    
     pkb = p_key.private_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
-    
     return snowflake.connector.connect(
-        user=st.secrets["snowflake"]["user"],
-        account=st.secrets["snowflake"]["account"],
+        user=sf_secrets["user"],
+        account=sf_secrets["account"],
         private_key=pkb,
-        warehouse=st.secrets["snowflake"].get("warehouse"),
-        database=st.secrets["snowflake"].get("database"),
-        schema=st.secrets["snowflake"].get("schema"),
-        role=st.secrets["snowflake"].get("role")
+        warehouse=sf_secrets.get("warehouse"),
+        database=sf_secrets.get("database"),
+        schema=sf_secrets.get("schema"),
+        role=sf_secrets.get("role"),
     )
 
 def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optional[pd.DataFrame]:
