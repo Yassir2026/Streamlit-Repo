@@ -53,7 +53,7 @@ def get_snowflake_connection():
         role=sf_secrets.get("role"),
     )
 
-def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optional[pd.DataFrame]:
+def execute_snowflake_query(query: str, params: Optional[tuple] = None, retry_count: int = 0) -> Optional[pd.DataFrame]:
     """
     Execute a SQL query on Snowflake and return results as a pandas DataFrame.
     Uses Streamlit's connection management for robustness and performance.
@@ -61,6 +61,7 @@ def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optio
     Args:
         query (str): SQL query to execute.
         params (Optional[tuple]): Query parameters for parameterized queries.
+        retry_count (int): Internal counter for connection retries.
         
     Returns:
         Optional[pd.DataFrame]: Query results as DataFrame or None if execution fails.
@@ -87,6 +88,14 @@ def execute_snowflake_query(query: str, params: Optional[tuple] = None) -> Optio
             # st.warning("⚠️ Query returned no data.")
             return pd.DataFrame()  # Return an empty DataFrame for consistency
             
+    except snowflake.connector.errors.ProgrammingError as e:
+        # 08001 indicates an authentication error (e.g., token expired or connection closed)
+        if e.msg and "08001" in e.msg and retry_count < 1:
+            st.warning("🔄 Connection expired, attempting to reconnect...")
+            get_snowflake_connection.clear()  # Clear invalid connection cache
+            return execute_snowflake_query(query, params, retry_count=retry_count + 1)
+        st.error(f"❌ Query execution failed on Snowflake: {str(e)}")
+        return None
     except Exception as e:
         st.error(f"❌ Query execution failed on Snowflake: {str(e)}")
         return None
