@@ -399,19 +399,6 @@ elif page == "☁️ AWS + OpenFDA Pipeline":
         fatal_reports = volume_df['fatal_reports'].sum()
         st.metric("Fatal Reports", f"{fatal_reports:,}")
     
-    # Volume Trends Chart
-    st.markdown("#### 📈 Monthly Report Trends")
-    volume_trend = volume_df.groupby('report_month')[['total_reports', 'serious_reports', 'fatal_reports']].sum().reset_index()
-    fig_volume = px.line(
-        volume_trend,
-        x='report_month',
-        y=['total_reports', 'serious_reports', 'fatal_reports'],
-        title="Monthly Report Trends",
-        labels={'value': 'Number of Reports', 'variable': 'Report Type'},
-        color_discrete_sequence=['#1f77b4', '#ff7f0e', '#d62728']
-    )
-    st.plotly_chart(fig_volume, use_container_width=True)
-    
     st.markdown("---")
     
     # Top 10 Drugs Section
