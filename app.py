@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 # Import database connection modules
-from database_connections.redshift_connection import (
+from database_connections.supabase_connection import (
     load_fda_volume_analysis,
     load_top_drugs_analysis,
     load_global_adverse_distribution,
