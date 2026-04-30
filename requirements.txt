@@ -8,3 +8,4 @@ snowflake-connector-python>=3.12.0
 cryptography>=41.0.0,<42.0.0
 matplotlib
 rich==13.7.1
+psycopg2-binary>=2.9.0
